@@ -17,14 +17,11 @@
 package com.example.android.advancedcoroutines
 
 import androidx.annotation.AnyThread
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.liveData
-import androidx.lifecycle.map
-import androidx.lifecycle.switchMap
 import com.example.android.advancedcoroutines.util.CacheOnSuccess
 import com.example.android.advancedcoroutines.utils.ComparablePair
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 
 /**
@@ -49,13 +46,7 @@ class PlantRepository private constructor(
    * Fetch a list of [Plant]s from the database.
    * Returns a LiveData-wrapped List of Plants.
    */
-  val plants: LiveData<List<Plant>> = liveData<List<Plant>> {
-    val plantsLiveData = plantDao.getPlants()
-    val customSortOrder = plantsListSortOrderCache.getOrAwait()
-    emitSource(plantsLiveData.map { plantList ->
-      plantList.applySort(customSortOrder)
-    })
-  }
+  val plants: Flow<List<Plant>> = plantDao.getPlants()
 
   private fun List<Plant>.applySort(customSortOrder: List<String>): List<Plant> {
     // Our product manager requested that these plants always be sorted first in this
@@ -74,12 +65,6 @@ class PlantRepository private constructor(
    */
   fun getPlantsWithGrowZone(growZone: GrowZone) =
     plantDao.getPlantsWithGrowZoneNumber(growZone.number)
-      .switchMap { plantList ->
-        liveData {
-          val customSortOrder = plantsListSortOrderCache.getOrAwait()
-          emit(plantList.applyMainSafeSort(customSortOrder))
-        }
-      }
 
   @AnyThread
   suspend fun List<Plant>.applyMainSafeSort(customSortOrder: List<String>) =
